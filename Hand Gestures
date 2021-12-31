@@ -1,0 +1,79 @@
+import cv2
+import mediapipe as mp
+import math
+
+width = 1500
+height = 1500
+myHands = mp.solutions.hands.Hands(False, 2, 1, .1)
+mpDraw = mp.solutions.drawing_utils
+
+
+def detecting_hands(frame):
+    myHandss = []
+    framBGR = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = myHands.process(framBGR)
+
+    if results.multi_hand_landmarks != None:
+        for hand in results.multi_handedness:
+            HandsType = []
+            HandType = hand.classification[0].label
+            # index= hand.classification[0].index
+            HandsType.append(HandType)
+            # print(hand.classification)
+            # print(HandType)
+            # print(hand)
+        handy=[]
+        for hand_landmark in results.multi_hand_landmarks:
+            mpDraw.draw_landmarks(frame, hand_landmark, mp.solutions.hands.HAND_CONNECTIONS)
+            handy.append(hand_landmark)
+            print(handy)
+
+            aHand = []
+            for i in hand_landmark.landmark:
+                aHand.append((int(i.x * width), int(i.y * height), int(1)))
+                #print(aHand)
+
+            myHandss.append(aHand)
+            # cv2.circle(frame, aHand[20], 25, (255, 0, 0), -1)
+
+            # print(myHandss)
+            if len(aHand) != 0:
+                # print(aHand[4], aHand[8])
+                x1, y1 = aHand[4][0], aHand[4][1]
+                x2, y2 = aHand[8][0], aHand[8][1]
+                # print(x1, y1)
+
+                cv2.circle(frame, (x1, y1), 15, (255, 0, 0), cv2.FILLED)
+                cv2.circle(frame, (x2, y2), 15, (255, 0, 0), cv2.FILLED)
+                cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                dx = (x1 + x2) / 2
+                dy = (y1 + y2) / 2
+
+                cv2.circle(frame, (int(dx), int(dy)), 15, (0, 255, 255), cv2.FILLED)
+                # print(dx, dy)
+                length = math.hypot((x1 - x2), (y1 - y2))
+                # print(length)
+                if length < 200 and HandType == 'Left':
+                    cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
+                    cv2.circle(frame, (int(dx), int(dy)), 15, (0, 255, 255), cv2.FILLED)
+                if length < 200 and HandType == 'Right':
+                    cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                    cv2.circle(frame, (int(dx), int(dy)), 15, (0, 255, 255), cv2.FILLED)
+
+        return myHandss, HandsType
+
+
+cam = cv2.VideoCapture(0)
+
+while True:
+    ignore, frame = cam.read()
+    frame = cv2.resize(frame, (width, height))
+
+    handData = detecting_hands(frame)
+    # for i in j:
+    # cv2.circle(frame, i[20], 25, (255, 0, 0), -1)
+
+    cv2.imshow("window", frame)
+    if cv2.waitKey(1) & 0xff == ord('q'):
+        break
+cam.release()
